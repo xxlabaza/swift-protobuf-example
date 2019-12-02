@@ -14,40 +14,37 @@
  * limitations under the License.
  */
 
+import handlers
 import model
 import NIO
-import NIOFoundationCompat
-import struct Foundation.Data
 
 
 final class ServerHandler: ChannelInboundHandler {
 
-  typealias InboundIn = ByteBuffer
-  typealias OutboundOut = ByteBuffer
+  typealias InboundIn = AnyWrapper
+  typealias OutboundOut = AnyWrapper
 
   public func channelRead (context: ChannelHandlerContext, data: NIOAny) {
-    let inboundBuffer = unwrapInboundIn(data)
-    let offset = inboundBuffer.readerIndex
-    let length = inboundBuffer.readableBytes
-    guard let data = inboundBuffer.getData(at: offset, length: length) else {
-      print("error, during reading the request")
+    let anyIn = unwrapInboundIn(data)
+    if anyIn.isA(RegistrationRequest.self) == false {
+      print("error")
       return
     }
-    let request = try! RegistrationRequest(serializedData: data)
-    print("request: \(request)")
 
+    let request = try! RegistrationRequest(unpackingAny: anyIn)
+    let response = handle(request)
+
+    let anyOut = try! AnyWrapper(message: response)
+    let outbound = wrapOutboundOut(anyOut)
+    context.writeAndFlush(outbound, promise: nil)
+  }
+
+  func handle (_ request: RegistrationRequest) -> RegistrationResponse {
+    print("request: \(request)")
     let response = RegistrationResponse.with {
       $0.isRegistered = true
     }
     print("response: \(response)")
-    let binary: Data = try! response.serializedData()
-    var outboundBuffer = context.channel.allocator.buffer(capacity: binary.count)
-    binary.forEach { byte in
-      outboundBuffer.writeInteger(byte as UInt8)
-    }
-    let outbound = wrapOutboundOut(outboundBuffer)
-    context.writeAndFlush(outbound).whenSuccess {
-      context.close(promise: nil)
-    }
+    return response
   }
 }

@@ -25,6 +25,7 @@ let package = Package(
   products: [
     .executable(name: "server", targets: ["server"]),
     .executable(name: "client", targets: ["client"]),
+    .library(name: "handlers", targets: ["handlers"]),
     .library(name: "model", targets: ["model"]),
   ],
 
@@ -37,15 +38,20 @@ let package = Package(
     .target(name: "model", dependencies: [
       "SwiftProtobuf",
     ]),
-    .target(name: "server", dependencies: [
+    .target(name: "handlers", dependencies: [
       "model",
       "NIO",
       "NIOFoundationCompat",
     ]),
+    .target(name: "server", dependencies: [
+      "model",
+      "handlers",
+      "NIO",
+    ]),
     .target(name: "client", dependencies: [
       "model",
+      "handlers",
       "NIO",
-      "NIOFoundationCompat",
     ]),
   ]
 )

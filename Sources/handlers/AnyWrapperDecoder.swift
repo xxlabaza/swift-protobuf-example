@@ -14,36 +14,30 @@
  * limitations under the License.
  */
 
-import handlers
 import model
 import NIO
+import struct Foundation.Data
 
 
-final class ClientHandler: ChannelInboundHandler {
+public final class AnyWrapperDecoder: ChannelInboundHandler {
 
-  typealias InboundIn = AnyWrapper
-  typealias OutboundOut = AnyWrapper
+  public typealias InboundIn = Data
+  public typealias InboundOut = AnyWrapper
 
-  public func channelActive (context: ChannelHandlerContext) {
-    let request = RegistrationRequest.with {
-      $0.application = "popa"
-      $0.deviceIdentifier = "0000"
-    }
-    print("request: \(request)")
-    let anyOut = try! AnyWrapper(message: request)
-    let outbound = wrapOutboundOut(anyOut)
-    context.writeAndFlush(outbound, promise: nil)
+  public init () {
   }
 
   public func channelRead (context: ChannelHandlerContext, data: NIOAny) {
-    let anyIn = unwrapInboundIn(data)
-    if anyIn.isA(RegistrationResponse.self) == false {
-      print("error")
+    let binary: Data = unwrapInboundIn(data)
+    let request: AnyWrapper
+    do {
+      request = try AnyWrapper(serializedData: binary)
+    } catch {
+      let exception = HandlerErrors.failedToDecodeAnyWrapper(cause: error)
+      context.fireErrorCaught(exception)
       return
     }
-
-    let response = try! RegistrationResponse(unpackingAny: anyIn)
-    context.close(promise: nil)
-    print("response: \(response)")
+    let out = wrapInboundOut(request)
+    context.fireChannelRead(out)
   }
 }

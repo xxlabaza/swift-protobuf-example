@@ -14,27 +14,10 @@
  * limitations under the License.
  */
 
-import handlers
-import NIO
 
+public enum HandlerErrors: Error {
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-defer {
-  try! group.syncShutdownGracefully()
+  case failedToDecodeData
+  case failedToDecodeAnyWrapper(cause: Error)
+  case failedToEncodeAnyWrapper(cause: Error)
 }
-
-let bootstrap = ClientBootstrap(group: group)
-  .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-  .channelInitializer { channel in
-    channel.pipeline.addHandlers([
-      DataDecoder(),
-      DataEncoder(),
-      AnyWrapperDecoder(),
-      AnyWrapperEncoder(),
-      ClientHandler()
-    ])
-  }
-
-let port = 8899
-let channel = try bootstrap.connect(host: "127.0.0.1", port: port).wait()
-try channel.closeFuture.wait()

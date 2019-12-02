@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import handlers
 import NIO
 
 
@@ -27,7 +28,13 @@ let bootstrap = ServerBootstrap(group: group)
   .serverChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
   .childChannelInitializer { channel in
     channel.pipeline.addHandler(BackPressureHandler()).flatMap { v in
-      channel.pipeline.addHandler(ServerHandler())
+      channel.pipeline.addHandlers([
+        DataDecoder(),
+        DataEncoder(),
+        AnyWrapperDecoder(),
+        AnyWrapperEncoder(),
+        ServerHandler()
+      ])
     }
   }
   .childChannelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
